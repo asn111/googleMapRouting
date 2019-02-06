@@ -21,7 +21,8 @@ class ViewController: UIViewController,CLLocationManagerDelegate {
     let destLongitude="73.1580"
     let geoCoder = CLGeocoder()
     var locManager = CLLocationManager()
-    let marker = GMSMarker()
+    let marker1 = GMSMarker()
+    let marker2 = GMSMarker()
     var currentLocation: CLLocation!
     let zoomLevel = 12.0
     var long = ""
@@ -62,7 +63,7 @@ class ViewController: UIViewController,CLLocationManagerDelegate {
             getLocPermission()
         }
     }
-    func showOnMap(currentLoc: CLLocation) {
+    func showOnMap(currentLoc: CLLocation, marker: String) {
         geoCoder.reverseGeocodeLocation(currentLoc, completionHandler: {(placemarks, error) in
             
             if (error != nil) {
@@ -78,8 +79,10 @@ class ViewController: UIViewController,CLLocationManagerDelegate {
                 self.name = placemark.name!
                 self.isoCon = placemark.isoCountryCode!
                 self.timezone = placemark.timeZone!
-                
-                
+                if marker.contains("marker1"){
+                self.marker1.title = "\(placemark.name!)"
+                self.marker1.snippet = "\(placemark.country!)"
+                }
             }
         })
         
@@ -87,26 +90,27 @@ class ViewController: UIViewController,CLLocationManagerDelegate {
         let camera = GMSCameraPosition.camera(withLatitude: Double(currentLoc.coordinate.latitude), longitude: Double(currentLoc.coordinate.longitude), zoom: Float(zoomLevel))
         
         mapView.camera = camera
-        showMarker(position: camera.target)
+        if marker.contains("marker1") {
+        showMarker(position: camera.target, marker: marker1,iconName: "car_icon" )
+        } else if marker.contains("marker2") {
+            showMarker(position: camera.target, marker: marker2, iconName: "pin_icon")
+        }
         mapView.settings.myLocationButton = true
         mapView.settings.compassButton = true
         mapView.settings.indoorPicker = true
-        mapView.isMyLocationEnabled = true
+        //mapView.isMyLocationEnabled = true
         mapView.padding = UIEdgeInsets(top: 0, left: 0, bottom: 143, right: 10)
-
-        
-        mapView.selectedMarker = marker
+       // mapView.selectedMarker = marker
 
     }
     
-    func showMarker(position: CLLocationCoordinate2D){
+    func showMarker(position: CLLocationCoordinate2D, marker: GMSMarker, iconName: String){
         
-        //this line will move you back to your current location if you go throu the map
         marker.tracksViewChanges = true
         marker.position = position
         marker.isDraggable=false
         //marker.groundAnchor = CGPoint(x: 0.1, y: 0.1)
-        marker.icon = UIImage(named: "pin_icon")
+        marker.icon = UIImage(named: iconName)
         marker.tracksInfoWindowChanges = true
         marker.map = mapView
     }
@@ -137,7 +141,9 @@ class ViewController: UIViewController,CLLocationManagerDelegate {
             currentLocation = locManager.location
             long = "\(currentLocation.coordinate.longitude)"
             lat = "\(currentLocation.coordinate.latitude)"
-            print("LAT \(lat) && LONG \(long)")
+            let message = "LAT \(lat) && LONG \(long)"
+            print(message)
+            showOnMap(currentLoc: currentLocation, marker: "marker2")
             fetchMapData()
         }
     }
@@ -171,12 +177,21 @@ class ViewController: UIViewController,CLLocationManagerDelegate {
         let location: CLLocation = locations.last!
         print("Location: \(location)")
         
-        let camera = GMSCameraPosition.camera(withLatitude: location.coordinate.latitude,
-                                              longitude: location.coordinate.longitude,
-                                              zoom: Float(zoomLevel))
-        
-        mapView.camera = camera
-        mapView.animate(to: camera)
+        DispatchQueue.main.async {
+            let camera = GMSCameraPosition.camera(withLatitude: location.coordinate.latitude,
+                                                  longitude: location.coordinate.longitude,
+                                                  zoom: Float(self.zoomLevel))
+            
+            self.mapView.camera = camera
+            self.mapView.animate(to: camera)
+            self.showOnMap(currentLoc: location, marker: "marker1")
+
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 180.0) { // Change `2.0` to the desired number of seconds.
+            self.fetchMapData()
+        }
+
+
     }
     
     
@@ -207,7 +222,6 @@ class ViewController: UIViewController,CLLocationManagerDelegate {
                     self.addPolyLine(encodedString: line)
                     let coordinate:CLLocation = CLLocation(latitude: Double(self.destLatitude)!, longitude: Double(self.destLongitude)!)
 
-                    self.showOnMap(currentLoc: coordinate)
                     
                     
                     let legsArray = (routes["legs"] as? Array) ?? []
@@ -216,8 +230,13 @@ class ViewController: UIViewController,CLLocationManagerDelegate {
                     let distance = (legs["distance"] as? Dictionary<String,AnyObject>) ?? [:]
                     let duration = (legs["duration"] as? Dictionary<String,AnyObject>) ?? [:]
                     
-                    self.marker.title = "Distance: \(distance["text"]!)"
-                    self.marker.snippet = "ETA: \(duration["text"]!)"
+                    DispatchQueue.main.async {
+                        self.showOnMap(currentLoc: coordinate, marker: "marker2")
+                        self.marker2.title = "Distance: \(distance["text"]!), ETA: \(duration["text"]!)"
+                        self.marker2.snippet = "Destination \(legs["end_address"]!)"
+                    }
+                   
+
                     
                 }
         }
@@ -225,13 +244,13 @@ class ViewController: UIViewController,CLLocationManagerDelegate {
     }
     
     func addPolyLine(encodedString: String) {
-        
-        let path = GMSMutablePath(fromEncodedPath: encodedString)
-        let polyline = GMSPolyline(path: path)
-        polyline.strokeWidth = 4
-        polyline.strokeColor = .black
-        polyline.map = mapView
-        
+        DispatchQueue.main.async {
+            let path = GMSMutablePath(fromEncodedPath: encodedString)
+            let polyline = GMSPolyline(path: path)
+            polyline.strokeWidth = 4
+            polyline.strokeColor = .black
+            polyline.map = self.mapView
+        }
        
         
     }
@@ -240,3 +259,4 @@ class ViewController: UIViewController,CLLocationManagerDelegate {
 extension ViewController: GMSMapViewDelegate{
     
 }
+
