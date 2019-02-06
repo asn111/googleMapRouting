@@ -92,6 +92,9 @@ class ViewController: UIViewController,CLLocationManagerDelegate {
         mapView.settings.compassButton = true
         mapView.settings.indoorPicker = true
         mapView.isMyLocationEnabled = true
+        mapView.padding = UIEdgeInsets(top: 0, left: 0, bottom: 143, right: 10)
+
+        
         mapView.selectedMarker = marker
 
     }
@@ -102,7 +105,7 @@ class ViewController: UIViewController,CLLocationManagerDelegate {
         marker.tracksViewChanges = true
         marker.position = position
         marker.isDraggable=false
-        //marker.groundAnchor = CGPoint(x: -0.3, y: -0.3)
+        //marker.groundAnchor = CGPoint(x: 0.1, y: 0.1)
         marker.icon = UIImage(named: "pin_icon")
         marker.tracksInfoWindowChanges = true
         marker.map = mapView
@@ -209,10 +212,11 @@ class ViewController: UIViewController,CLLocationManagerDelegate {
                     
                     let legsArray = (routes["legs"] as? Array) ?? []
                     let legs = (legsArray.first as? Dictionary<String, AnyObject>) ?? [:]
+                    print(legs["end_address"]!)
                     let distance = (legs["distance"] as? Dictionary<String,AnyObject>) ?? [:]
                     let duration = (legs["duration"] as? Dictionary<String,AnyObject>) ?? [:]
                     
-                    self.marker.title = "\(distance["text"]!)"
+                    self.marker.title = "Distance: \(distance["text"]!)"
                     self.marker.snippet = "ETA: \(duration["text"]!)"
                     
                 }
