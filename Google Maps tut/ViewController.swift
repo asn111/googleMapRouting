@@ -17,13 +17,13 @@ class ViewController: UIViewController,CLLocationManagerDelegate {
     @IBOutlet fileprivate weak var mapView: GMSMapView!
     
     //MARK:- Properties
-    let destLatitude="33.7294"
-    let destLongitude="73.0749"
+    let destLatitude="33.5207"
+    let destLongitude="73.1580"
     let geoCoder = CLGeocoder()
     var locManager = CLLocationManager()
     let marker = GMSMarker()
     var currentLocation: CLLocation!
-    let zoomLevel = 15.0
+    let zoomLevel = 12.0
     var long = ""
     var lat = ""
     var locality = ""
@@ -62,8 +62,8 @@ class ViewController: UIViewController,CLLocationManagerDelegate {
             getLocPermission()
         }
     }
-    func showOnMap() {
-        geoCoder.reverseGeocodeLocation(currentLocation, completionHandler: {(placemarks, error) in
+    func showOnMap(currentLoc: CLLocation) {
+        geoCoder.reverseGeocodeLocation(currentLoc, completionHandler: {(placemarks, error) in
             
             if (error != nil) {
                 print("Error in reverseGeocode")
@@ -78,14 +78,13 @@ class ViewController: UIViewController,CLLocationManagerDelegate {
                 self.name = placemark.name!
                 self.isoCon = placemark.isoCountryCode!
                 self.timezone = placemark.timeZone!
-                self.marker.title = "\(self.locality), \(self.administrativeArea)"
-                self.marker.snippet = "\(self.country) \(self.isoCon)"
+                
                 
             }
         })
         
         //MAP
-        let camera = GMSCameraPosition.camera(withLatitude: Double(lat)!, longitude: Double(long)!, zoom: Float(zoomLevel))
+        let camera = GMSCameraPosition.camera(withLatitude: Double(currentLoc.coordinate.latitude), longitude: Double(currentLoc.coordinate.longitude), zoom: Float(zoomLevel))
         
         mapView.camera = camera
         showMarker(position: camera.target)
@@ -93,17 +92,22 @@ class ViewController: UIViewController,CLLocationManagerDelegate {
         mapView.settings.compassButton = true
         mapView.settings.indoorPicker = true
         mapView.isMyLocationEnabled = true
+        mapView.selectedMarker = marker
+
     }
     
     func showMarker(position: CLLocationCoordinate2D){
         
         //this line will move you back to your current location if you go throu the map
-        //marker.tracksViewChanges = true
+        marker.tracksViewChanges = true
         marker.position = position
-        marker.isDraggable=true
+        marker.isDraggable=false
+        //marker.groundAnchor = CGPoint(x: -0.3, y: -0.3)
         marker.icon = UIImage(named: "pin_icon")
+        marker.tracksInfoWindowChanges = true
         marker.map = mapView
     }
+    
     func getLocPermission() {
         
         switch(CLLocationManager.authorizationStatus()) {
@@ -131,9 +135,7 @@ class ViewController: UIViewController,CLLocationManagerDelegate {
             long = "\(currentLocation.coordinate.longitude)"
             lat = "\(currentLocation.coordinate.latitude)"
             print("LAT \(lat) && LONG \(long)")
-            showOnMap()
             fetchMapData()
-            //getRoute()
         }
     }
     func showLocationDisabledPopUp() {
@@ -199,8 +201,20 @@ class ViewController: UIViewController,CLLocationManagerDelegate {
                     let polypoints = (overviewPolyline["points"] as? String) ?? ""
                     let line  = polypoints
                     
-                   
                     self.addPolyLine(encodedString: line)
+                    let coordinate:CLLocation = CLLocation(latitude: Double(self.destLatitude)!, longitude: Double(self.destLongitude)!)
+
+                    self.showOnMap(currentLoc: coordinate)
+                    
+                    
+                    let legsArray = (routes["legs"] as? Array) ?? []
+                    let legs = (legsArray.first as? Dictionary<String, AnyObject>) ?? [:]
+                    let distance = (legs["distance"] as? Dictionary<String,AnyObject>) ?? [:]
+                    let duration = (legs["duration"] as? Dictionary<String,AnyObject>) ?? [:]
+                    
+                    self.marker.title = "\(distance["text"]!)"
+                    self.marker.snippet = "ETA: \(duration["text"]!)"
+                    
                 }
         }
         
@@ -210,8 +224,8 @@ class ViewController: UIViewController,CLLocationManagerDelegate {
         
         let path = GMSMutablePath(fromEncodedPath: encodedString)
         let polyline = GMSPolyline(path: path)
-        polyline.strokeWidth = 2.5
-        polyline.strokeColor = .cyan
+        polyline.strokeWidth = 4
+        polyline.strokeColor = .black
         polyline.map = mapView
         
        
